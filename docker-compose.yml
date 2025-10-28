@@ -35,8 +35,10 @@ services:
       test: test $$(mongosh --port ${MONGO_1_PORT} --quiet --eval "try {rs.initiate({_id:'${MONGO_REPLICA_SET}',members:[{_id:0,host:\"mongo-1:${MONGO_1_PORT}\"}]})} catch(e) {rs.status().ok}") -eq 1
       interval: 10s
       start_period: 30s
-    ports:
-      - "127.0.0.1:${MONGO_1_PORT}:${MONGO_1_PORT}"
+    expose:
+      - "${MONGO_1_PORT}"
+    networks:
+      - local
 
   redis:
     depends_on:
@@ -52,8 +54,10 @@ services:
       interval: 10s
       timeout: 30s
       retries: 3
-    ports:
-      - "127.0.0.1:${REDIS_PORT}:${REDIS_PORT}"
+    expose:
+      - "${REDIS_PORT}"
+    networks:
+      - local
 
   minio:
     image: "minio/minio:${MINIO_VERSION}"
@@ -73,8 +77,10 @@ services:
       default:
         aliases:
           - "${MINIO_BUCKET}.minio" # <bucket-name>.<endpoint-name>
-    ports:
-      - "127.0.0.1:${EXTERNAL_MINIO_WEB_PORT}:${MINIO_WEB_PORT}"
+    expose:
+      - "${MINIO_WEB_PORT}"
+    networks:
+      - local
 
   create-bucket:
     restart: "no"
@@ -87,6 +93,8 @@ services:
       /usr/bin/mc mb minio/${MINIO_BUCKET};
       exit 0;
       "
+    networks:
+      - local
 
   any-sync-coordinator_bootstrap:
     image: "ghcr.io/anyproto/any-sync-coordinator:${ANY_SYNC_COORDINATOR_VERSION}"
@@ -99,6 +107,8 @@ services:
       - ./etc/any-sync-coordinator:/etc/any-sync-coordinator:Z
     restart: "no"
     command: ["/bin/any-sync-confapply", "-c", "/etc/any-sync-coordinator/config.yml", "-n", "/etc/any-sync-coordinator/network.yml", "-e"]
+    networks:
+      - local
 
   any-sync-coordinator:
     image: "ghcr.io/anyproto/any-sync-coordinator:${ANY_SYNC_COORDINATOR_VERSION}"
@@ -121,6 +131,8 @@ services:
         limits:
           memory: ${ANY_SYNC_DAEMONS_MEMORY_LIMIT:-}
     restart: unless-stopped
+    networks:
+      - local
 
   any-sync-filenode:
     image: "ghcr.io/anyproto/any-sync-filenode:${ANY_SYNC_FILENODE_VERSION}"
@@ -144,6 +156,8 @@ services:
         limits:
           memory: ${ANY_SYNC_DAEMONS_MEMORY_LIMIT:-}
     restart: unless-stopped
+    networks:
+      - local
 
   any-sync-node-1:
     image: "ghcr.io/anyproto/any-sync-node:${ANY_SYNC_NODE_VERSION}"
@@ -166,6 +180,8 @@ services:
         limits:
           memory: ${ANY_SYNC_DAEMONS_MEMORY_LIMIT:-}
     restart: unless-stopped
+    networks:
+      - local
 
   any-sync-node-2:
     image: "ghcr.io/anyproto/any-sync-node:${ANY_SYNC_NODE_VERSION}"
@@ -188,6 +204,8 @@ services:
         limits:
           memory: ${ANY_SYNC_DAEMONS_MEMORY_LIMIT:-}
     restart: unless-stopped
+    networks:
+      - local
 
   any-sync-node-3:
     image: "ghcr.io/anyproto/any-sync-node:${ANY_SYNC_NODE_VERSION}"
@@ -210,6 +228,8 @@ services:
         limits:
           memory: ${ANY_SYNC_DAEMONS_MEMORY_LIMIT:-}
     restart: unless-stopped
+    networks:
+      - local
 
   any-sync-consensusnode:
     image: "ghcr.io/anyproto/any-sync-consensusnode:${ANY_SYNC_CONSENSUSNODE_VERSION}"
@@ -228,6 +248,8 @@ services:
         limits:
           memory: ${ANY_SYNC_DAEMONS_MEMORY_LIMIT:-}
     restart: unless-stopped
+    networks:
+      - local
 
   # any-sync-netcheck
   netcheck:
@@ -250,3 +272,8 @@ services:
       test: any-sync-netcheck -c nodes.yml 2>&1| grep -E 'netcheck\s+success'
       interval: 10s
       start_period: 5s
+    networks:
+      - local
+
+networks:
+  - local:
