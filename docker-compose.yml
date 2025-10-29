@@ -27,12 +27,13 @@ services:
       generateconfig-processing:
         condition: service_completed_successfully
     image: "mongo:${MONGO_VERSION}"
+#    user: 999:999
     restart: unless-stopped
     command: ["--replSet", "${MONGO_REPLICA_SET}", "--port", "${MONGO_1_PORT}"]
     volumes:
       - "${STORAGE_DIR}/mongo-1:/data/db:Z"
     healthcheck:
-      test: test $$(mongosh --port ${MONGO_1_PORT} --quiet --eval "try {rs.initiate({_id:'${MONGO_REPLICA_SET}',members:[{_id:0,host:\"mongo-1:${MONGO_1_PORT}\"}]})} catch(e) {rs.status().ok}") -eq 1
+      test: test $$(mongosh --host mongo-1 --port ${MONGO_1_PORT} --quiet --eval "try {rs.initiate({_id:'${MONGO_REPLICA_SET}',members:[{_id:0,host:\"mongo-1:${MONGO_1_PORT}\"}]})} catch(e) {rs.status().ok}") -eq 1
       interval: 10s
       start_period: 30s
     expose:
@@ -74,13 +75,11 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      default:
+      local:
         aliases:
           - "${MINIO_BUCKET}.minio" # <bucket-name>.<endpoint-name>
     expose:
       - "${MINIO_WEB_PORT}"
-    networks:
-      - local
 
   create-bucket:
     restart: "no"
@@ -276,4 +275,4 @@ services:
       - local
 
 networks:
-  - local:
+  local: {}
